@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
         dateClick: function(info) {
             openEventModal(info.date);
         },
-        eventContent: customEventRender
+        eventDidMount: customEventRender  // <-- Use eventDidMount para alterar o DOM após a renderização
     });
     calendar.render();
 
@@ -306,46 +306,47 @@ document.addEventListener('DOMContentLoaded', function() {
     function customEventRender(info) {
         try {
             if (!info || !info.el || !info.event) {
-                console.warn('Invalid event info:', info);
+                console.warn('Informações do evento inválidas:', info);
                 return;
             }
-
             const el = info.el;
             const event = info.event;
             
-            // Safely extract title without HTML tags
-            const titleWithoutTags = event.title.replace(/<[^>]*>/g, '').trim();
-            
-            // Extract icon if present
-            const iconMatch = event.title.match(/<i class="material-icons">([^<]+)<\/i>/);
-            const eventIcon = iconMatch ? iconMatch[1] : null;
-
-            // Create clean title without icon tag
-            const cleanTitle = titleWithoutTags;
-
-            // Update event title
+            // Localiza o container que exibe o título do evento
             const titleEl = el.querySelector('.fc-event-title');
             if (titleEl) {
-                // Clear existing content
+                // Limpa o conteúdo existente para poder reconstruí-lo
                 titleEl.innerHTML = '';
-
-                // Add icon if exists (using global function)
-                if (eventIcon) {
-                    const iconSpan = document.createElement('span');
-                    iconSpan.className = 'material-icons event-icon';
-                    iconSpan.textContent = eventIcon;
-                    titleEl.appendChild(iconSpan);
+                
+                // Se houver emoji salvo, adiciona-o
+                if (event.extendedProps.emoji) {
+                    const emojiSpan = document.createElement('span');
+                    emojiSpan.textContent = event.extendedProps.emoji;
+                    titleEl.appendChild(emojiSpan);
+                    titleEl.appendChild(document.createTextNode(' ')); // Espaço após o emoji
                 }
-
-                // Add text content
-                const textNode = document.createTextNode(cleanTitle);
+                
+                // Adiciona o texto do título (que NÃO contém o HTML do ícone)
+                const titleText = event.title;
+                const textNode = document.createTextNode(titleText);
                 titleEl.appendChild(textNode);
+                
+                // Se houver um ícone definido em extendedProps, adiciona-o
+                if (event.extendedProps.icon) {
+                    titleEl.appendChild(document.createTextNode(' ')); // Espaço antes do ícone
+                    
+                    // Cria um container para o ícone
+                    const iconContainer = document.createElement('span');
+                    // Utiliza a função global para obter o HTML do ícone (definida no icons.js)
+                    iconContainer.innerHTML = window.getIconHTML(event.extendedProps.icon);
+                    titleEl.appendChild(iconContainer);
+                }
             }
         } catch (error) {
-            console.error('Error in customEventRender:', error);
+            console.error('Erro na customização do evento:', error);
         }
     }
-
+        
     eventForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -364,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const completed = document.getElementById('eventCompleted').checked;
 
         // Updated title generation to use global icon handling
-        const formattedTitle = `${emoji ? emoji + ' ' : ''}${title}${icon ? ` ${window.getIconHTML(icon)}` : ''}`;
+        const formattedTitle = `${emoji ? emoji + ' ' : ''}${title}`;
 
         // Rest of the existing code remains the same...
         const recurrenceConfig = {
@@ -391,13 +392,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const eventConfig = {
             id: eventId || Date.now().toString(),
-            title: formattedTitle,
+            title: formattedTitle, // Título sem o HTML do ícone
             start: start,
             description: description,
             extendedProps: {
                 completed: completed,
                 recurrence: recurrenceConfig,
-                icon: icon,
+                icon: icon,     // Armazena somente o valor, por exemplo: "favorite"
                 emoji: emoji
             }
         };

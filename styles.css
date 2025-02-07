@@ -349,3 +349,143 @@ emoji-picker {
     border-radius: 6px;
     cursor: pointer;
 }
+
+/* New styles for recurrence selection */
+.day-selector {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.day-selector label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.day-selector input[type="checkbox"] {
+    margin-bottom: 5px;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color);
+}
+
+.day-selector label:hover {
+    background-color: rgba(187,134,252,0.1);
+}
+
+.day-selector input[type="checkbox"]:checked + span {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.recurrence-options {
+    background-color: var(--input-bg);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+/* New styles for delete recurring modal */
+#deleteRecurringModal .modal-content {
+    text-align: center;
+}
+
+#deleteRecurringModal .form-group label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: var(--input-bg);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#deleteRecurringModal .form-group input[type="radio"] {
+    margin-right: 10px;
+    accent-color: var(--accent-color);
+}
+
+#deleteRecurringModal .form-group label:hover {
+    background-color: rgba(187,134,252,0.1);
+}
+
+#deleteRecurringModal .form-group input[type="radio"]:checked + span {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.event-icon-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.icon-picker-trigger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-color);
+    width: 40px;  
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;  
+}
+.icon-picker-trigger i {
+    pointer-events: none;  
+}
+#eventIcon {
+    padding-right: 40px;  
+}
+.icon-picker {
+    position: absolute;
+    z-index: 1000;
+    background-color: var(--input-bg);
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    right: 0;
+    top: 100%;
+    width: 100%;
+}
+.icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+}
+.icon-picker-item {
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s ease;
+    border-radius: 4px;
+}
+.icon-picker-item:hover {
+    background-color: rgba(187,134,252,0.1);
+}
+.emoji-picker-container {
+    position: relative;
+}
+emoji-picker {
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    max-width: 400px;
+}
