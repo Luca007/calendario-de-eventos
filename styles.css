@@ -498,7 +498,14 @@ emoji-picker {
 
 .emoji-input-container input {
     flex: 1;
-    padding-right: 30px; /* Espaço para o botão */
+    padding-right: 60px; /* Espaço suficiente para o ícone e o botão */
+}
+
+.emoji-picker-trigger {
+    position: absolute;
+    right: 30px;
+    cursor: pointer;
+    color: var(--accent-color);
 }
 
 #clearEmoji {

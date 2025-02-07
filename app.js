@@ -147,24 +147,25 @@ document.addEventListener('DOMContentLoaded', function() {
             this.value === 'custom' ? 'block' : 'none';
     });
 
-    // Emoji Picker Integration
+    // Seleciona os elementos do emoji
     const emojiInput = document.getElementById('eventEmoji');
     const emojiPicker = document.querySelector('emoji-picker');
-    const clearEmojiBtn = document.getElementById('clearEmoji'); // Botão "X" para limpar
+    const openEmojiPicker = document.getElementById('openEmojiPicker');
+    const clearEmojiBtn = document.getElementById('clearEmoji');
 
-    // Toggle emoji picker usando getComputedStyle para obter o display atual
-    emojiInput.addEventListener('click', (event) => {
-        event.stopPropagation();  // Impede que o clique seja propagado e feche o emoji picker
+    // Listener para o ícone que abre/fecha o emoji picker
+    openEmojiPicker.addEventListener('click', (event) => {
+        event.stopPropagation();  // Evita que o clique se propague
         const computedDisplay = window.getComputedStyle(emojiPicker).display;
         emojiPicker.style.display = computedDisplay === 'none' ? 'block' : 'none';
     });
 
-    // Impede que cliques dentro do emoji-picker se propaguem para o document
+    // Impede que cliques dentro do emoji-picker fechem ele
     emojiPicker.addEventListener('click', (event) => {
         event.stopPropagation();
     });
 
-    // Quando um emoji for clicado, adiciona-o ao final do conteúdo atual do input
+    // Quando um emoji for clicado, adiciona-o ao final do conteúdo do input
     emojiPicker.addEventListener('emoji-click', event => {
         emojiInput.value += event.detail.unicode;
         emojiPicker.style.display = 'none';
@@ -172,12 +173,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fecha o emoji picker quando clica fora dele
     document.addEventListener('click', (event) => {
-        if (!emojiPicker.contains(event.target) && event.target !== emojiInput) {
+        if (!emojiPicker.contains(event.target) && event.target !== openEmojiPicker) {
             emojiPicker.style.display = 'none';
         }
     });
 
-    // Listener para o botão "X" que limpa todo o conteúdo do campo
+    // Listener para o botão "X" que limpa o campo de emojis
     clearEmojiBtn.addEventListener('click', () => {
         emojiInput.value = '';
     });
@@ -326,38 +327,34 @@ document.addEventListener('DOMContentLoaded', function() {
             // Localiza o container que exibe o título do evento
             const titleEl = el.querySelector('.fc-event-title');
             if (titleEl) {
-                // Limpa o conteúdo existente para poder reconstruí-lo
+                // Limpa o conteúdo atual
                 titleEl.innerHTML = '';
                 
-                // Se houver emoji salvo, adiciona-o
-                if (event.extendedProps.emoji) {
-                    const emojiSpan = document.createElement('span');
-                    emojiSpan.textContent = event.extendedProps.emoji;
-                    titleEl.appendChild(emojiSpan);
-                    titleEl.appendChild(document.createTextNode(' ')); // Espaço após o emoji
-                }
-                
-                // Adiciona o texto do título (que NÃO contém o HTML do ícone)
-                const titleText = event.title;
-                const textNode = document.createTextNode(titleText);
-                titleEl.appendChild(textNode);
-                
-                // Se houver um ícone definido em extendedProps, adiciona-o
+                // 1. Se houver um ícone definido em extendedProps, adiciona-o primeiro
                 if (event.extendedProps.icon) {
-                    titleEl.appendChild(document.createTextNode(' ')); // Espaço antes do ícone
-                    
-                    // Cria um container para o ícone
                     const iconContainer = document.createElement('span');
-                    // Utiliza a função global para obter o HTML do ícone (definida no icons.js)
                     iconContainer.innerHTML = window.getIconHTML(event.extendedProps.icon);
                     titleEl.appendChild(iconContainer);
+                    titleEl.appendChild(document.createTextNode(' ')); // Espaço após o ícone
+                }
+                
+                // 2. Adiciona o texto do título
+                const textNode = document.createTextNode(event.title);
+                titleEl.appendChild(textNode);
+                
+                // 3. Se houver emojis definidos, adiciona-os depois do título
+                if (event.extendedProps.emoji) {
+                    titleEl.appendChild(document.createTextNode(' ')); // Espaço antes dos emojis
+                    const emojiContainer = document.createElement('span');
+                    emojiContainer.textContent = event.extendedProps.emoji;
+                    titleEl.appendChild(emojiContainer);
                 }
             }
         } catch (error) {
             console.error('Erro na customização do evento:', error);
         }
     }
-        
+
     eventForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
