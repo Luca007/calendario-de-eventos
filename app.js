@@ -150,25 +150,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Emoji Picker Integration
     const emojiInput = document.getElementById('eventEmoji');
     const emojiPicker = document.querySelector('emoji-picker');
+    const clearEmojiBtn = document.getElementById('clearEmoji'); // Botão "X" para limpar
 
-    // Toggle emoji picker
-    emojiInput.addEventListener('click', () => {
-        emojiPicker.style.display = 
-            emojiPicker.style.display === 'none' ? 'block' : 'none';
+    // Toggle emoji picker usando getComputedStyle para obter o display atual
+    emojiInput.addEventListener('click', (event) => {
+        event.stopPropagation();  // Impede que o clique seja propagado e feche o emoji picker
+        const computedDisplay = window.getComputedStyle(emojiPicker).display;
+        emojiPicker.style.display = computedDisplay === 'none' ? 'block' : 'none';
     });
 
-    // Select emoji
+    // Impede que cliques dentro do emoji-picker se propaguem para o document
+    emojiPicker.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+
+    // Quando um emoji for clicado, adiciona-o ao final do conteúdo atual do input
     emojiPicker.addEventListener('emoji-click', event => {
-        emojiInput.value = event.detail.unicode;
+        emojiInput.value += event.detail.unicode;
         emojiPicker.style.display = 'none';
     });
 
-    // Close emoji picker when clicking outside
+    // Fecha o emoji picker quando clica fora dele
     document.addEventListener('click', (event) => {
-        if (!emojiPicker.contains(event.target) && 
-            event.target !== emojiInput) {
+        if (!emojiPicker.contains(event.target) && event.target !== emojiInput) {
             emojiPicker.style.display = 'none';
         }
+    });
+
+    // Listener para o botão "X" que limpa todo o conteúdo do campo
+    clearEmojiBtn.addEventListener('click', () => {
+        emojiInput.value = '';
     });
 
     // Gamification Features
@@ -365,9 +376,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const completed = document.getElementById('eventCompleted').checked;
 
         // Updated title generation to use global icon handling
-        const formattedTitle = `${emoji ? emoji + ' ' : ''}${title}`;
+        const formattedTitle = title;
 
-        // Rest of the existing code remains the same...
         const recurrenceConfig = {
             type: recurrence,
             frequency: 1,

@@ -126,10 +126,13 @@
                     
                     <div class="form-group emoji-picker-container">
                         <label for="eventEmoji">Emoji</label>
-                        <input type="text" id="eventEmoji" placeholder="Selecione um emoji" readonly>
-                        <emoji-picker class="light"></emoji-picker>
+                        <div class="emoji-input-container">
+                            <input type="text" id="eventEmoji" placeholder="Selecione um emoji">
+                            <button id="clearEmoji" type="button" title="Remover todos os emojis">X</button>
+                        </div>
+                        <emoji-picker theme="dark"></emoji-picker>
                     </div>
-                    
+                                                            
                     <div class="form-group">
                         <label for="eventDescription">Descrição</label>
                         <textarea id="eventDescription" placeholder="Detalhes do evento"></textarea>
@@ -215,8 +218,8 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/locales/pt-br.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/dist/index.js" type="module"></script>
-    <script src="app.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
     <script src="icons.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

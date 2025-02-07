@@ -489,3 +489,24 @@ emoji-picker {
     width: 100%;
     max-width: 400px;
 }
+
+.emoji-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.emoji-input-container input {
+    flex: 1;
+    padding-right: 30px; /* Espaço para o botão */
+}
+
+#clearEmoji {
+    position: absolute;
+    right: 5px;
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 16px;
+}
