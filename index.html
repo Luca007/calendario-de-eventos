@@ -1,0 +1,418 @@
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizador de Rotina Gamificado</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/dist/emoji-picker.css">
+    <style>
+        /* New styles for recurrence selection */
+        .day-selector {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .day-selector label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .day-selector input[type="checkbox"] {
+            margin-bottom: 5px;
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-color);
+        }
+
+        .day-selector label:hover {
+            background-color: rgba(187,134,252,0.1);
+        }
+
+        .day-selector input[type="checkbox"]:checked + span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .recurrence-options {
+            background-color: var(--input-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        /* New styles for delete recurring modal */
+        #deleteRecurringModal .modal-content {
+            text-align: center;
+        }
+
+        #deleteRecurringModal .form-group label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: var(--input-bg);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #deleteRecurringModal .form-group input[type="radio"] {
+            margin-right: 10px;
+            accent-color: var(--accent-color);
+        }
+
+        #deleteRecurringModal .form-group label:hover {
+            background-color: rgba(187,134,252,0.1);
+        }
+
+        #deleteRecurringModal .form-group input[type="radio"]:checked + span {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+        
+        .event-icon-selector {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .icon-picker-trigger {
+            background: none;
+            border: none;
+            cursor: pointer;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent-color);
+            width: 40px;  
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;  
+        }
+        .icon-picker-trigger i {
+            pointer-events: none;  
+        }
+        #eventIcon {
+            padding-right: 40px;  
+        }
+        .icon-picker {
+            position: absolute;
+            z-index: 1000;
+            background-color: var(--input-bg);
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            right: 0;
+            top: 100%;
+            width: 100%;
+        }
+        .icon-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+        }
+        .icon-picker-item {
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s ease;
+            border-radius: 4px;
+        }
+        .icon-picker-item:hover {
+            background-color: rgba(187,134,252,0.1);
+        }
+        .emoji-picker-container {
+            position: relative;
+        }
+        emoji-picker {
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Meu Organizador de Rotina</h1>
+            <div class="header-stats">
+                <div class="user-score">
+                    <i class="material-icons">stars</i>
+                    <span id="userScore">0</span> Pontos
+                </div>
+                <div class="user-level">
+                    Nível <span id="userLevel">1</span>
+                </div>
+            </div>
+            <nav>
+                <button id="addEventBtn" class="btn-primary">
+                    <i class="material-icons">add_circle</i> Novo Evento
+                </button>
+                <button id="monthlyReportBtn" class="btn-secondary">
+                    <i class="material-icons">analytics</i> Relatório Mensal
+                </button>
+            </nav>
+        </header>
+
+        <main>
+            <div id="calendar"></div>
+        </main>
+
+        <!-- Event Modal for Add/Edit -->
+        <div id="eventModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle">Adicionar Novo Evento</h2>
+                <form id="eventForm">
+                    <input type="hidden" id="eventId">
+                    <div class="form-group">
+                        <label for="eventTitle">Título do Evento</label>
+                        <input type="text" id="eventTitle" placeholder="Digite o título" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventStart">Data e Hora</label>
+                        <input type="text" id="eventStart" placeholder="Selecione data e hora" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recurrenceType">Tipo de Repetição</label>
+                        <select id="recurrenceType">
+                            <option value="none">Não repetir</option>
+                            <option value="daily">Diariamente</option>
+                            <option value="weekly">Semanalmente</option>
+                            <option value="weekdays">Dias úteis</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                    </div>
+
+                    <div id="customRecurrenceGroup" class="recurrence-options" style="display:none;">
+                        <div class="day-selector">
+                            <label>
+                                <input type="checkbox" name="recurDay" value="0">
+                                <span>Dom</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" name="recurDay" value="1">
+                                <span>Seg</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" name="recurDay" value="2">
+                                <span>Ter</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" name="recurDay" value="3">
+                                <span>Qua</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" name="recurDay" value="4">
+                                <span>Qui</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" name="recurDay" value="5">
+                                <span>Sex</span>
+                            </label>
+                            <label>
+                                <input type="checkbox" name="recurDay" value="6">
+                                <span>Sáb</span>
+                            </label>
+                        </div>
+                        
+                        <div class="recurrence-frequency" style="margin-top: 15px;">
+                            <label for="recurrenceFrequency">Frequência</label>
+                            <select id="recurrenceFrequency" style="width: 100%; padding: 10px; margin-top: 5px;">
+                                <option value="1">A cada semana</option>
+                                <option value="2">A cada 2 semanas</option>
+                                <option value="3">A cada 3 semanas</option>
+                                <option value="4">A cada 4 semanas</option>
+                            </select>
+                        </div>
+                        
+                        <div class="recurrence-end" style="margin-top: 15px;">
+                            <label for="recurrenceEndDate">Até a data</label>
+                            <input type="text" id="recurrenceEndDate" placeholder="Data final da repetição" style="width: 100%; padding: 10px; margin-top: 5px;">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group event-icon-selector">
+                        <label for="eventIcon">Ícone</label>
+                        <button type="button" id="iconPickerTrigger" class="icon-picker-trigger">
+                            <i class="material-icons">help_outline</i>
+                        </button>
+                        <div class="icon-picker" id="iconPicker">
+                            <div class="icon-picker-grid" id="iconPickerGrid"></div>
+                        </div>
+                        <input type="hidden" id="eventIcon">
+                    </div>
+                    
+                    <div class="form-group emoji-picker-container">
+                        <label for="eventEmoji">Emoji</label>
+                        <input type="text" id="eventEmoji" placeholder="Selecione um emoji" readonly>
+                        <emoji-picker class="light"></emoji-picker>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="eventDescription">Descrição</label>
+                        <textarea id="eventDescription" placeholder="Detalhes do evento"></textarea>
+                    </div>
+                    <div class="form-group event-completion">
+                        <label for="eventCompleted">
+                            <input type="checkbox" id="eventCompleted">
+                            Marcar como Concluído
+                        </label>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn-primary">
+                            <i class="material-icons">save</i> Salvar Evento
+                        </button>
+                        <button type="button" id="deleteEventBtn" class="btn-delete" style="display: none;">
+                            <i class="material-icons">delete</i> Excluir Evento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Recurring Modal with improved styling -->
+        <div id="deleteRecurringModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Remover Eventos Recorrentes</h2>
+                <div class="form-group">
+                    <p>Escolha como deseja remover os eventos:</p>
+                    <label>
+                        <input type="radio" name="deleteOption" value="single" checked>
+                        <span>Remover apenas este evento</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="deleteOption" value="all">
+                        <span>Remover todos os eventos recorrentes</span>
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button id="confirmDeleteRecurring" class="btn-delete">
+                        <i class="material-icons">delete</i> Confirmar Remoção
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Report Modal -->
+        <div id="monthlyReportModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Retrospectiva Mensal</h2>
+                <div id="monthlyReportContent">
+                    <div class="report-section">
+                        <h3>Resumo de Atividades</h3>
+                        <div id="activitySummary"></div>
+                    </div>
+                    <div class="report-section">
+                        <h3>Dias Mais Ativos</h3>
+                        <div id="mostActiveDays"></div>
+                    </div>
+                    <div class="report-section">
+                        <h3>Atividades Não Concluídas</h3>
+                        <div id="uncompletedActivities"></div>
+                    </div>
+                    <div class="report-section">
+                        <h3>Ranking de Meses</h3>
+                        <div id="monthRanking"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievement Modal -->
+        <div id="achievementModal" class="modal">
+            <div class="modal-content">
+                <h2>Conquista Desbloqueada!</h2>
+                <div id="achievementContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/locales/pt-br.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/dist/index.js" type="module"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const iconList = [
+                'event', 'work', 'sports', 'school', 'favorite', 'flight', 
+                'shopping_cart', 'fitness_center', 'home', 'restaurant', 'music_note', 
+                'laptop', 'phone', 'email', 'local_airport', 'directions_car', 
+                'local_hospital', 'local_cafe', 'local_library', 'weekend', 'beach_access', 
+                'golf_course', 'hiking', 'movie', 'brush', 'science', 'wb_sunny', 
+                'nightlight_round', 'cloud', 'water', 'park', 'pets', 'cake', 
+                'celebration', 'coffee', 'laptop_mac', 'smartphone', 'videogame_asset', 
+                'inventory', 'family_restroom', 'medical_services', 'sports_soccer', 
+                'sports_tennis', 'sports_esports', 'task', 'water_drop', 'bedtime', 
+                'self_improvement', 'psychology', 'savings', 'nature', 'waves', 
+                'music_video', 'palette', 'memory', 'calculate', 'accessibility', 
+                'agriculture', 'air', 'anchor', 'architecture', 'backpack', 
+                'battery_charging_full', 'biotech', 'border_color', 'brush', 
+                'build', 'camera_alt', 'card_giftcard', 'celebration', 'child_care'
+            ];
+
+            const iconPickerGrid = document.getElementById('iconPickerGrid');
+            const iconPickerTrigger = document.getElementById('iconPickerTrigger');
+            const iconPicker = document.getElementById('iconPicker');
+            const eventIcon = document.getElementById('eventIcon');
+
+            window.getIconHTML = function(iconName) {
+                return iconName ? `<span class="material-icons event-icon">${iconName}</span>` : '';
+            };
+
+            iconList.forEach(icon => {
+                const iconItem = document.createElement('div');
+                iconItem.classList.add('icon-picker-item');
+                iconItem.innerHTML = `<i class="material-icons">${icon}</i>`;
+                iconItem.addEventListener('click', () => {
+                    eventIcon.value = icon;
+                    iconPickerTrigger.innerHTML = `<i class="material-icons">${icon}</i>`;
+                    iconPicker.style.display = 'none';
+                });
+                iconPickerGrid.appendChild(iconItem);
+            });
+
+            iconPickerTrigger.addEventListener('click', (event) => {
+                event.stopPropagation();  
+                iconPicker.style.display = iconPicker.style.display === 'block' ? 'none' : 'block';
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!iconPicker.contains(event.target) && event.target !== iconPickerTrigger) {
+                    iconPicker.style.display = 'none';
+                }
+            });
+
+            iconPicker.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        });
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>

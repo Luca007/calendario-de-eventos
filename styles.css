@@ -1,0 +1,351 @@
+:root {
+    --bg-dark: #121212;
+    --bg-dark-light: #1E1E1E;
+    --text-primary: #E0E0E0;
+    --accent-color: #BB86FC;
+    --accent-color-variant: #3700B3;
+    --input-bg: #2C2C2C;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    background-color: var(--bg-dark-light);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    color: var(--accent-color);
+    margin: 0;
+    font-weight: 300;
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: var(--bg-dark);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-color-variant);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+#calendar {
+    background-color: var(--bg-dark-light);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: var(--bg-dark-light);
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+#eventForm {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    color: var(--accent-color);
+    font-weight: 500;
+}
+
+#eventForm input, 
+#eventForm select, 
+#eventForm textarea {
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid rgba(187,134,252,0.3);
+    padding: 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+#eventForm input:focus, 
+#eventForm select:focus, 
+#eventForm textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(187,134,252,0.2);
+}
+
+.close {
+    color: var(--text-primary);
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: var(--accent-color);
+}
+
+/* FullCalendar Dark Theme Customizations */
+.fc-theme-standard .fc-scrollgrid {
+    border-color: var(--bg-dark-light) !important;
+}
+
+.fc-theme-standard td, 
+.fc-theme-standard th {
+    border-color: var(--bg-dark-light) !important;
+}
+
+.fc-daygrid-day-number {
+    color: var(--text-primary) !important;
+}
+
+.fc-col-header-cell {
+    background-color: var(--bg-dark-light) !important;
+    color: var(--accent-color) !important;
+}
+
+/* FullCalendar Today Indicator Styling */
+.fc-day-today {
+    background-color: var(--accent-color) !important;
+    border-radius: 8px !important;
+    color: var(--bg-dark) !important;
+}
+
+.fc-daygrid-day-number.fc-day-today {
+    color: var(--bg-dark) !important;
+    font-weight: bold;
+}
+
+/* Additional styles for edit/delete functionality */
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.btn-delete {
+    background-color: #FF5252;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-delete:hover {
+    background-color: #D32F2F;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* Improved Flatpickr Theming */
+.flatpickr-calendar {
+    background-color: var(--bg-dark-light) !important;
+    color: var(--text-primary) !important;
+}
+
+.flatpickr-day {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+.flatpickr-day.selected {
+    background-color: var(--accent-color) !important;
+    color: var(--bg-dark) !important;
+}
+
+.flatpickr-day.today {
+    border-color: var(--accent-color) !important;
+}
+
+.flatpickr-day:hover {
+    background-color: rgba(187,134,252,0.2) !important;
+}
+
+.header-stats {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background-color: var(--bg-dark-light);
+    padding: 10px 15px;
+    border-radius: 8px;
+}
+
+.user-score, .user-level {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-color);
+}
+
+.btn-secondary {
+    background-color: var(--accent-color-variant);
+    color: var(--text-primary);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: var(--accent-color);
+    color: var(--bg-dark);
+}
+
+.event-completion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.event-completion input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color);
+}
+
+#monthlyReportModal .report-section {
+    background-color: var(--input-bg);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+#monthlyReportModal .report-section h3 {
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+
+#achievementModal .modal-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.day-selector {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.day-selector label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.day-selector input[type="checkbox"] {
+    accent-color: var(--accent-color);
+}
+
+.recurrence-frequency, .recurrence-end {
+    margin-top: 10px;
+}
+
+.event-icon {
+    margin-right: 5px;
+    vertical-align: middle;
+    font-size: 16px;
+}
+
+.fc-event-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.emoji-picker-container {
+    position: relative;
+}
+
+emoji-picker {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    max-width: 400px;
+    background-color: var(--bg-dark-light);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+#eventEmoji {
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid rgba(187,134,252,0.3);
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
