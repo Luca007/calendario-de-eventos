@@ -11,6 +11,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/dist/emoji-picker.css">
 </head>
 <body>
+    <!-- Overlay de Login -->
+    <div id="loginOverlay">
+        <div class="login-container">
+        <h2>Login</h2>
+        <input type="email" id="loginEmail" placeholder="Digite seu email" required>
+        <input type="password" id="loginPassword" placeholder="Digite sua senha" required>
+        <button id="loginButton">Entrar</button>
+        </div>
+    </div>
     <div class="app-container">
         <header>
             <h1>Meu Organizador de Rotina</h1>
@@ -223,6 +232,15 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+
+    <script type="module" src="auth.js"></script>
+    <script type="module" src="login.js"></script>
+    <script type="module" src="loginOverlay.js"></script>
+    <script type="module" src="carregamento.js"></script>
+
+    <script src="calendario.js"></script>
+    <script src="eventos.js"></script>
+    
     <script src="icons.js"></script>
     <script src="app.js"></script>
 </body>
