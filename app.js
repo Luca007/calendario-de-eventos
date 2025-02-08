@@ -290,10 +290,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // Listener de envio do formulário para salvar o evento no Firebase
   eventForm.addEventListener('submit', async function(e) {
     e.preventDefault();
+  
     if (!validateEventForm()) {
       return;
     }
     
+    // Coleta os valores do formulário
     const eventId = document.getElementById('eventId').value;
     const title = document.getElementById('eventTitle').value;
     const start = document.getElementById('eventStart').value;
@@ -302,14 +304,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const recurrence = document.getElementById('recurrenceType').value;
     const description = document.getElementById('eventDescription').value;
     const completed = document.getElementById('eventCompleted').checked;
+    
+    // Neste exemplo, o título formatado é apenas o título sem concatenar emoji ou ícone
     const formattedTitle = title;
+    
+    // Configuração de recorrência
     const recurrenceConfig = {
       type: recurrence,
       frequency: 1,
       days: [],
       endDate: null
     };
-    
+  
     if (recurrence === 'custom') {
       const selectedDays = Array.from(
         document.querySelectorAll('input[name="recurDay"]:checked')
@@ -321,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
       recurrenceConfig.days = [1, 2, 3, 4, 5];
     }
     
-    // Obtém o calendário selecionado pelo dropdown
+    // Obtém o calendário atualmente selecionado pelo dropdown
     const currentCalendar = document.getElementById("calendarSelect").value;
     
     // Monta o objeto do evento
@@ -340,17 +346,39 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     try {
-      // Salva o evento no Firebase na coleção correspondente e na subcoleção do usuário
+      // Salva o evento no Firebase (função definida no firebaseEvents.js)
       await salvarEventoFirebase(eventConfig, firebaseAuth.currentUser, currentCalendar);
-      // Adiciona o evento no FullCalendar (opcional: o listener onSnapshot pode atualizar a interface)
-      calendar.addEvent(eventConfig);
+      
+      // Se estamos editando (evento já existe)
+      if (eventId) {
+        // Procura o evento existente no FullCalendar
+        const existingEvent = calendar.getEventById(eventId);
+        if (existingEvent) {
+          // Atualiza as propriedades do evento existente
+          existingEvent.setProp('title', formattedTitle);
+          existingEvent.setStart(start);
+          existingEvent.setExtendedProp('description', description);
+          existingEvent.setExtendedProp('completed', completed);
+          existingEvent.setExtendedProp('recurrence', recurrenceConfig);
+          existingEvent.setExtendedProp('icon', icon);
+          existingEvent.setExtendedProp('emoji', emoji);
+          existingEvent.setExtendedProp('calendar', currentCalendar);
+        } else {
+          // Se, por algum motivo, o evento não for encontrado, adiciona-o
+          calendar.addEvent(eventConfig);
+        }
+      } else {
+        // Se for um novo evento, adiciona-o ao FullCalendar
+        calendar.addEvent(eventConfig);
+      }
+      
       closeModal();
     } catch (error) {
       console.error("Erro ao salvar o evento no Firebase:", error);
       alert("Erro ao salvar o evento. Veja o console para detalhes.");
     }
   });
-
+  
   // Listener para apagar evento (chama a função do Firebase)
   deleteEventBtn.addEventListener('click', async function() {
     const eventId = document.getElementById('eventId').value;
