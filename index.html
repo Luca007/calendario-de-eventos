@@ -20,6 +20,36 @@
         <button id="loginButton">Entrar</button>
         </div>
     </div>
+
+    <header>
+        <h1>Meu Organizador de Rotina</h1>
+        <!-- Dropdown de seleção de calendário -->
+        <div class="calendar-dropdown">
+        <select id="calendarSelect">
+            <option value="ludica">Calendário Ludica</option>
+            <option value="ludy">Calendário Ludy</option>
+            <option value="luca">Calendário Luca</option>
+        </select>
+        </div>
+        <div class="header-stats">
+            <div class="user-score">
+                <i class="material-icons">stars</i>
+                <span id="userScore">0</span> Pontos
+            </div>
+            <div class="user-level">
+                Nível <span id="userLevel">1</span>
+            </div>
+        </div>
+        <nav>
+            <button id="addEventBtn" class="btn-primary">
+                <i class="material-icons">add_circle</i> Novo Evento
+            </button>
+            <button id="monthlyReportBtn" class="btn-secondary">
+                <i class="material-icons">analytics</i> Relatório Mensal
+            </button>
+        </nav>
+    </header>
+
     <div class="app-container">
         <header>
             <h1>Meu Organizador de Rotina</h1>
@@ -233,15 +263,8 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
 
-    <script type="module" src="auth.js"></script>
-    <script type="module" src="login.js"></script>
-    <script type="module" src="loginOverlay.js"></script>
-    <script type="module" src="carregamento.js"></script>
-
-    <script src="calendario.js"></script>
-    <script src="eventos.js"></script>
+    <script type="module" src="main.js"></script>
     
     <script src="icons.js"></script>
-    <script src="app.js"></script>
 </body>
 </html>

@@ -1,594 +1,419 @@
+import { firebaseAuth } from "./auth.js";
+import { salvarEventoFirebase, apagarEventoFirebase } from "./firebaseEvents.js";
+
+// Declare a variável "calendar" no nível de módulo para que possamos exportá-la.
+let calendar;
+
 document.addEventListener('DOMContentLoaded', function() {
-    const calendarEl = document.getElementById('calendar');
-    const eventModal = document.getElementById('eventModal');
-    const addEventBtn = document.getElementById('addEventBtn');
-    const closeModalBtn = document.querySelector('.close');
-    const eventForm = document.getElementById('eventForm');
-    const deleteEventBtn = document.getElementById('deleteEventBtn');
-    const modalTitle = document.getElementById('modalTitle');
+  const calendarEl = document.getElementById('calendar');
+  const eventModal = document.getElementById('eventModal');
+  const addEventBtn = document.getElementById('addEventBtn');
+  const closeModalBtn = document.querySelector('.close');
+  const eventForm = document.getElementById('eventForm');
+  const deleteEventBtn = document.getElementById('deleteEventBtn');
+  const modalTitle = document.getElementById('modalTitle');
 
-    // Configuração do Calendário
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
-        },
-        locale: 'pt-br',
-        editable: true,
-        events: [], // Eventos serão carregados aqui
-        dateClick: function(info) {
-            openEventModal(info.date);
-        },
-        eventDidMount: customEventRender  // <-- Use eventDidMount para alterar o DOM após a renderização
-    });
-    calendar.render();
+  // Configuração do FullCalendar
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    locale: 'pt-br',
+    editable: true,
+    events: [],
+    dateClick: function(info) {
+      openEventModal(info.date);
+    },
+    eventDidMount: customEventRender
+  });
+  calendar.render();
 
-    // Configuração do Flatpickr
-    const eventStartInput = document.getElementById('eventStart');
-    const flatpickrInstance = flatpickr(eventStartInput, {
-        enableTime: true,
-        dateFormat: "Y-m-d H:i",
-        locale: "pt",
-        time_24hr: true
-    });
+  // Configuração do Flatpickr para o input de data/hora
+  const eventStartInput = document.getElementById('eventStart');
+  const flatpickrInstance = flatpickr(eventStartInput, {
+    enableTime: true,
+    dateFormat: "Y-m-d H:i",
+    locale: "pt",
+    time_24hr: true
+  });
 
-    // Abrir Modal de Evento
-    function openEventModal(date = null, existingEvent = null) {
-        // Reset form and modal
-        eventForm.reset();
-        deleteEventBtn.style.display = 'none';
-        modalTitle.textContent = 'Adicionar Novo Evento';
-        document.getElementById('eventId').value = '';
+  // Função para abrir o modal de evento
+  function openEventModal(date = null, existingEvent = null) {
+    eventForm.reset();
+    deleteEventBtn.style.display = 'none';
+    modalTitle.textContent = 'Adicionar Novo Evento';
+    document.getElementById('eventId').value = '';
 
-        // Reset recurrence type and hide custom options
-        recurrenceTypeSelect.value = 'none';
-        document.getElementById('customRecurrenceGroup').style.display = 'none';
-        
-        // Reset checkboxes
-        document.querySelectorAll('input[name="recurDay"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        document.getElementById('recurrenceFrequency').selectedIndex = 0;
-        document.getElementById('recurrenceEndDate').value = '';
+    // Reseta recorrência
+    recurrenceTypeSelect.value = 'none';
+    document.getElementById('customRecurrenceGroup').style.display = 'none';
+    document.querySelectorAll('input[name="recurDay"]').forEach(chk => chk.checked = false);
+    document.getElementById('recurrenceFrequency').selectedIndex = 0;
+    document.getElementById('recurrenceEndDate').value = '';
 
-        if (existingEvent) {
-            // Populate form with existing event details
-            document.getElementById('eventTitle').value = existingEvent.title.replace(/<i class="material-icons">[^<]+<\/i>/g, '').replace(/^\s+|\s+$/g, '').replace(/^[\ufe0f]/g, '');
-            document.getElementById('eventStart').value = existingEvent.startStr;
-            document.getElementById('eventDescription').value = existingEvent.extendedProps.description || '';
-            document.getElementById('eventId').value = existingEvent.id;
-            document.getElementById('eventCompleted').checked = existingEvent.extendedProps.completed || false;
-            
-            // Show delete button for existing events
-            deleteEventBtn.style.display = 'flex';
-            modalTitle.textContent = 'Editar Evento';
+    if (existingEvent) {
+      document.getElementById('eventTitle').value = existingEvent.title.replace(/<i class="material-icons">[^<]+<\/i>/g, '').trim();
+      document.getElementById('eventStart').value = existingEvent.startStr;
+      document.getElementById('eventDescription').value = existingEvent.extendedProps.description || '';
+      document.getElementById('eventId').value = existingEvent.id;
+      document.getElementById('eventCompleted').checked = existingEvent.extendedProps.completed || false;
+      deleteEventBtn.style.display = 'flex';
+      modalTitle.textContent = 'Editar Evento';
 
-            if (existingEvent.extendedProps.recurrence) {
-                const recurrence = existingEvent.extendedProps.recurrence;
-                
-                // Populate recurrence details if existing event has recurrence
-                if (recurrence.type !== 'none') {
-                    recurrenceTypeSelect.value = recurrence.type;
-                    
-                    if (recurrence.type === 'custom') {
-                        document.getElementById('customRecurrenceGroup').style.display = 'block';
-                        
-                        // Check previously selected days
-                        if (recurrence.days) {
-                            recurrence.days.forEach(day => {
-                                const checkbox = document.querySelector(`input[name="recurDay"][value="${day}"]`);
-                                if (checkbox) checkbox.checked = true;
-                            });
-                        }
-                        
-                        // Set frequency if available
-                        if (recurrence.frequency) {
-                            document.getElementById('recurrenceFrequency').value = recurrence.frequency;
-                        }
-                        
-                        // Set end date if available
-                        if (recurrence.endDate) {
-                            document.getElementById('recurrenceEndDate').value = recurrence.endDate;
-                        }
-                    }
-                }
+      if (existingEvent.extendedProps.recurrence) {
+        const recurrence = existingEvent.extendedProps.recurrence;
+        if (recurrence.type !== 'none') {
+          recurrenceTypeSelect.value = recurrence.type;
+          if (recurrence.type === 'custom') {
+            document.getElementById('customRecurrenceGroup').style.display = 'block';
+            if (recurrence.days) {
+              recurrence.days.forEach(day => {
+                const chk = document.querySelector(`input[name="recurDay"][value="${day}"]`);
+                if (chk) chk.checked = true;
+              });
             }
-
-            if (existingEvent.extendedProps.icon) {
-                document.getElementById('eventIcon').value = existingEvent.extendedProps.icon;
+            if (recurrence.frequency) {
+              document.getElementById('recurrenceFrequency').value = recurrence.frequency;
             }
-
-            if (existingEvent.extendedProps.emoji) {
-                document.getElementById('eventEmoji').value = existingEvent.extendedProps.emoji;
+            if (recurrence.endDate) {
+              document.getElementById('recurrenceEndDate').value = recurrence.endDate;
             }
-        } else if (date) {
-            // Set date for new event
-            flatpickrInstance.setDate(date);
+          }
         }
-
-        eventModal.style.display = 'block';
+      }
+      if (existingEvent.extendedProps.icon) {
+        document.getElementById('eventIcon').value = existingEvent.extendedProps.icon;
+      }
+      if (existingEvent.extendedProps.emoji) {
+        document.getElementById('eventEmoji').value = existingEvent.extendedProps.emoji;
+      }
+    } else if (date) {
+      flatpickrInstance.setDate(date);
     }
+    eventModal.style.display = 'block';
+  }
 
-    // Fechar Modal
-    function closeModal() {
-        eventModal.style.display = 'none';
-        eventForm.reset();
+  // Função para fechar o modal
+  function closeModal() {
+    eventModal.style.display = 'none';
+    eventForm.reset();
+  }
+
+  addEventBtn.addEventListener('click', () => openEventModal());
+  closeModalBtn.addEventListener('click', closeModal);
+
+  // Manipulação do tipo de recorrência
+  const recurrenceTypeSelect = document.getElementById('recurrenceType');
+  const customRecurrenceGroup = document.getElementById('customRecurrenceGroup');
+  const recurrenceEndDateInput = document.getElementById('recurrenceEndDate');
+  const recurrenceEndDatePicker = flatpickr(recurrenceEndDateInput, {
+    dateFormat: "Y-m-d",
+    locale: "pt",
+  });
+
+  recurrenceTypeSelect.addEventListener('change', function() {
+    document.querySelectorAll('input[name="recurDay"]').forEach(chk => chk.checked = false);
+    document.getElementById('recurrenceFrequency').selectedIndex = 0;
+    document.getElementById('recurrenceEndDate').value = '';
+    customRecurrenceGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+  });
+
+  // Configuração do emoji
+  const emojiInput = document.getElementById('eventEmoji');
+  const emojiPicker = document.querySelector('emoji-picker');
+  const openEmojiPicker = document.getElementById('openEmojiPicker');
+  const clearEmojiBtn = document.getElementById('clearEmoji');
+
+  openEmojiPicker.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const computedDisplay = window.getComputedStyle(emojiPicker).display;
+    emojiPicker.style.display = computedDisplay === 'none' ? 'block' : 'none';
+  });
+  emojiPicker.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+  emojiPicker.addEventListener('emoji-click', event => {
+    emojiInput.value += event.detail.unicode;
+    emojiPicker.style.display = 'none';
+  });
+  document.addEventListener('click', (event) => {
+    if (!emojiPicker.contains(event.target) && event.target !== openEmojiPicker) {
+      emojiPicker.style.display = 'none';
     }
+  });
+  clearEmojiBtn.addEventListener('click', () => {
+    emojiInput.value = '';
+  });
 
-    // Eventos de Click
-    addEventBtn.addEventListener('click', () => openEventModal());
-    closeModalBtn.addEventListener('click', closeModal);
+  // Recursos de gamificação (mantidos conforme seu código)
+  const userScoreEl = document.getElementById('userScore');
+  const userLevelEl = document.getElementById('userLevel');
+  const monthlyReportBtn = document.getElementById('monthlyReportBtn');
+  const monthlyReportModal = document.getElementById('monthlyReportModal');
+  const achievementModal = document.getElementById('achievementModal');
 
-    // Recurrence type selection handling
-    const recurrenceTypeSelect = document.getElementById('recurrenceType');
-    const customRecurrenceGroup = document.getElementById('customRecurrenceGroup');
-    const recurrenceEndDateInput = document.getElementById('recurrenceEndDate');
+  const userProgress = {
+    score: 0,
+    level: 1,
+    monthlyStats: {},
+    achievements: []
+  };
 
-    // Flatpickr for recurrence end date
-    const recurrenceEndDatePicker = flatpickr(recurrenceEndDateInput, {
-        dateFormat: "Y-m-d",
-        locale: "pt",
+  function updateUserScore(points) {
+    userProgress.score += points;
+    userProgress.level = Math.floor(userProgress.score / 100) + 1;
+    userScoreEl.textContent = userProgress.score;
+    userLevelEl.textContent = userProgress.level;
+    checkAchievements();
+    saveUserProgress();
+  }
+
+  function checkAchievements() {
+    const achievements = [
+      { name: 'Primeiro Passo', condition: () => userProgress.score >= 50 },
+      { name: 'Consistência', condition: () => userProgress.score >= 200 },
+      { name: 'Mestre da Organização', condition: () => userProgress.level >= 5 }
+    ];
+    achievements.forEach(achievement => {
+      if (achievement.condition() && !userProgress.achievements.includes(achievement.name)) {
+        userProgress.achievements.push(achievement.name);
+        showAchievementModal(achievement.name);
+      }
     });
+  }
 
-    recurrenceTypeSelect.addEventListener('change', function() {
-        const customRecurrenceGroup = document.getElementById('customRecurrenceGroup');
-        
-        // Reset checkboxes and selections when changing type
-        document.querySelectorAll('input[name="recurDay"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        document.getElementById('recurrenceFrequency').selectedIndex = 0;
-        document.getElementById('recurrenceEndDate').value = '';
-        
-        // Show/hide based on selected type
-        customRecurrenceGroup.style.display = 
-            this.value === 'custom' ? 'block' : 'none';
-    });
+  function showAchievementModal(achievementName) {
+    const achievementContent = document.getElementById('achievementContent');
+    achievementContent.innerHTML = `
+      <i class="material-icons" style="font-size: 64px; color: var(--accent-color);">stars</i>
+      <h3>Parabéns!</h3>
+      <p>Você desbloqueou a conquista: ${achievementName}</p>
+    `;
+    achievementModal.style.display = 'block';
+    setTimeout(() => {
+      achievementModal.style.display = 'none';
+    }, 3000);
+  }
 
-    // Seleciona os elementos do emoji
-    const emojiInput = document.getElementById('eventEmoji');
-    const emojiPicker = document.querySelector('emoji-picker');
-    const openEmojiPicker = document.getElementById('openEmojiPicker');
-    const clearEmojiBtn = document.getElementById('clearEmoji');
+  function generateMonthlyReport() {
+    const currentMonth = new Date().getMonth();
+    const events = calendar.getEvents();
+    const monthEvents = events.filter(event => new Date(event.start).getMonth() === currentMonth);
+    const completedEvents = monthEvents.filter(event => event.extendedProps.completed);
+    const activitySummary = document.getElementById('activitySummary');
+    activitySummary.innerHTML = `
+      <p>Total de Eventos: ${monthEvents.length}</p>
+      <p>Eventos Concluídos: ${completedEvents.length}</p>
+      <p>Taxa de Conclusão: ${(completedEvents.length / monthEvents.length * 100).toFixed(2)}%</p>
+    `;
+    const dayActivity = monthEvents.reduce((acc, event) => {
+      const day = new Date(event.start).getDate();
+      acc[day] = (acc[day] || 0) + 1;
+      return acc;
+    }, {});
+    const mostActiveDays = document.getElementById('mostActiveDays');
+    mostActiveDays.innerHTML = Object.entries(dayActivity)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([day, count]) => `<p>Dia ${day}: ${count} eventos</p>`)
+      .join('');
+    const uncompletedActivities = monthEvents.filter(event => !event.extendedProps.completed);
+    const uncompletedList = document.getElementById('uncompletedActivities');
+    uncompletedList.innerHTML = uncompletedActivities
+      .map(event => `<p>${event.title} - ${new Date(event.start).toLocaleDateString()}</p>`)
+      .join('');
+  }
 
-    // Listener para o ícone que abre/fecha o emoji picker
-    openEmojiPicker.addEventListener('click', (event) => {
-        event.stopPropagation();  // Evita que o clique se propague
-        const computedDisplay = window.getComputedStyle(emojiPicker).display;
-        emojiPicker.style.display = computedDisplay === 'none' ? 'block' : 'none';
-    });
+  // Função de validação do formulário
+  function validateEventForm() {
+    const title = document.getElementById('eventTitle').value.trim();
+    const start = document.getElementById('eventStart').value.trim();
+    const recurrenceType = document.getElementById('recurrenceType').value;
+    if (!title) {
+      alert('Por favor, insira um título para o evento.');
+      return false;
+    }
+    if (!start) {
+      alert('Por favor, selecione uma data e hora para o evento.');
+      return false;
+    }
+    if (recurrenceType === 'custom') {
+      const selectedDays = document.querySelectorAll('input[name="recurDay"]:checked');
+      if (selectedDays.length === 0) {
+        alert('Por favor, selecione pelo menos um dia para eventos personalizados.');
+        return false;
+      }
+      const endDate = document.getElementById('recurrenceEndDate').value.trim();
+      if (!endDate) {
+        alert('Por favor, selecione uma data final para eventos personalizados.');
+        return false;
+      }
+    }
+    return true;
+  }
 
-    // Impede que cliques dentro do emoji-picker fechem ele
-    emojiPicker.addEventListener('click', (event) => {
-        event.stopPropagation();
-    });
-
-    // Quando um emoji for clicado, adiciona-o ao final do conteúdo do input
-    emojiPicker.addEventListener('emoji-click', event => {
-        emojiInput.value += event.detail.unicode;
-        emojiPicker.style.display = 'none';
-    });
-
-    // Fecha o emoji picker quando clica fora dele
-    document.addEventListener('click', (event) => {
-        if (!emojiPicker.contains(event.target) && event.target !== openEmojiPicker) {
-            emojiPicker.style.display = 'none';
+  // Função para customizar a renderização dos eventos no calendário
+  function customEventRender(info) {
+    try {
+      if (!info || !info.el || !info.event) {
+        console.warn('Informações do evento inválidas:', info);
+        return;
+      }
+      const el = info.el;
+      const event = info.event;
+      const titleEl = el.querySelector('.fc-event-title');
+      if (titleEl) {
+        titleEl.innerHTML = '';
+        if (event.extendedProps.icon) {
+          const iconContainer = document.createElement('span');
+          iconContainer.innerHTML = window.getIconHTML(event.extendedProps.icon);
+          titleEl.appendChild(iconContainer);
+          titleEl.appendChild(document.createTextNode(' '));
         }
-    });
+        const textNode = document.createTextNode(event.title);
+        titleEl.appendChild(textNode);
+        if (event.extendedProps.emoji) {
+          titleEl.appendChild(document.createTextNode(' '));
+          const emojiContainer = document.createElement('span');
+          emojiContainer.textContent = event.extendedProps.emoji;
+          titleEl.appendChild(emojiContainer);
+        }
+      }
+    } catch (error) {
+      console.error('Erro na customização do evento:', error);
+    }
+  }
 
-    // Listener para o botão "X" que limpa o campo de emojis
-    clearEmojiBtn.addEventListener('click', () => {
-        emojiInput.value = '';
-    });
-
-    // Gamification Features
-    const userScoreEl = document.getElementById('userScore');
-    const userLevelEl = document.getElementById('userLevel');
-    const monthlyReportBtn = document.getElementById('monthlyReportBtn');
-    const monthlyReportModal = document.getElementById('monthlyReportModal');
-    const achievementModal = document.getElementById('achievementModal');
-
-    // User Progress Tracking
-    const userProgress = {
-        score: 0,
-        level: 1,
-        monthlyStats: {},
-        achievements: []
+  // Listener de envio do formulário para salvar o evento no Firebase
+  eventForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!validateEventForm()) {
+      return;
+    }
+    
+    const eventId = document.getElementById('eventId').value;
+    const title = document.getElementById('eventTitle').value;
+    const start = document.getElementById('eventStart').value;
+    const icon = document.getElementById('eventIcon').value;
+    const emoji = document.getElementById('eventEmoji').value;
+    const recurrence = document.getElementById('recurrenceType').value;
+    const description = document.getElementById('eventDescription').value;
+    const completed = document.getElementById('eventCompleted').checked;
+    const formattedTitle = title;
+    const recurrenceConfig = {
+      type: recurrence,
+      frequency: 1,
+      days: [],
+      endDate: null
     };
-
-    function updateUserScore(points) {
-        userProgress.score += points;
-        userProgress.level = Math.floor(userProgress.score / 100) + 1;
-        
-        userScoreEl.textContent = userProgress.score;
-        userLevelEl.textContent = userProgress.level;
-
-        checkAchievements();
-        saveUserProgress();
+    
+    if (recurrence === 'custom') {
+      const selectedDays = Array.from(
+        document.querySelectorAll('input[name="recurDay"]:checked')
+      ).map(checkbox => parseInt(checkbox.value));
+      recurrenceConfig.days = selectedDays;
+      recurrenceConfig.frequency = document.getElementById('recurrenceFrequency').value;
+      recurrenceConfig.endDate = document.getElementById('recurrenceEndDate').value || null;
+    } else if (recurrence === 'weekdays') {
+      recurrenceConfig.days = [1, 2, 3, 4, 5];
     }
-
-    function checkAchievements() {
-        const achievements = [
-            { name: 'Primeiro Passo', condition: () => userProgress.score >= 50 },
-            { name: 'Consistência', condition: () => userProgress.score >= 200 },
-            { name: 'Mestre da Organização', condition: () => userProgress.level >= 5 }
-        ];
-
-        achievements.forEach(achievement => {
-            if (achievement.condition() && !userProgress.achievements.includes(achievement.name)) {
-                userProgress.achievements.push(achievement.name);
-                showAchievementModal(achievement.name);
-            }
-        });
+    
+    // Obtém o calendário selecionado pelo dropdown
+    const currentCalendar = document.getElementById("calendarSelect").value;
+    
+    // Monta o objeto do evento
+    const eventConfig = {
+      id: eventId || Date.now().toString(),
+      title: formattedTitle,
+      start: start,
+      description: description,
+      extendedProps: {
+        completed: completed,
+        recurrence: recurrenceConfig,
+        icon: icon,
+        emoji: emoji,
+        calendar: currentCalendar
+      }
+    };
+    
+    try {
+      // Salva o evento no Firebase na coleção correspondente e na subcoleção do usuário
+      await salvarEventoFirebase(eventConfig, firebaseAuth.currentUser, currentCalendar);
+      // Adiciona o evento no FullCalendar (opcional: o listener onSnapshot pode atualizar a interface)
+      calendar.addEvent(eventConfig);
+      closeModal();
+    } catch (error) {
+      console.error("Erro ao salvar o evento no Firebase:", error);
+      alert("Erro ao salvar o evento. Veja o console para detalhes.");
     }
+  });
 
-    function showAchievementModal(achievementName) {
-        const achievementContent = document.getElementById('achievementContent');
-        achievementContent.innerHTML = `
-            <i class="material-icons" style="font-size: 64px; color: var(--accent-color);">stars</i>
-            <h3>Parabéns!</h3>
-            <p>Você desbloqueou a conquista: ${achievementName}</p>
-        `;
-        achievementModal.style.display = 'block';
-        setTimeout(() => {
-            achievementModal.style.display = 'none';
-        }, 3000);
-    }
-
-    // Monthly Report Generation
-    function generateMonthlyReport() {
-        const currentMonth = new Date().getMonth();
-        const events = calendar.getEvents();
-        
-        const monthEvents = events.filter(event => 
-            new Date(event.start).getMonth() === currentMonth
-        );
-
-        const completedEvents = monthEvents.filter(event => 
-            event.extendedProps.completed
-        );
-
-        const activitySummary = document.getElementById('activitySummary');
-        activitySummary.innerHTML = `
-            <p>Total de Eventos: ${monthEvents.length}</p>
-            <p>Eventos Concluídos: ${completedEvents.length}</p>
-            <p>Taxa de Conclusão: ${(completedEvents.length / monthEvents.length * 100).toFixed(2)}%</p>
-        `;
-
-        // Most Active Days
-        const dayActivity = monthEvents.reduce((acc, event) => {
-            const day = new Date(event.start).getDate();
-            acc[day] = (acc[day] || 0) + 1;
-            return acc;
-        }, {});
-
-        const mostActiveDays = document.getElementById('mostActiveDays');
-        mostActiveDays.innerHTML = Object.entries(dayActivity)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
-            .map(([day, count]) => `<p>Dia ${day}: ${count} eventos</p>`)
-            .join('');
-
-        // Uncompleted Activities
-        const uncompletedActivities = monthEvents.filter(event => !event.extendedProps.completed);
-        const uncompletedList = document.getElementById('uncompletedActivities');
-        uncompletedList.innerHTML = uncompletedActivities
-            .map(event => `<p>${event.title} - ${new Date(event.start).toLocaleDateString()}</p>`)
-            .join('');
-    }
-
-    // Form Validation Function
-    function validateEventForm() {
-        const title = document.getElementById('eventTitle').value.trim();
-        const start = document.getElementById('eventStart').value.trim();
-        const recurrenceType = document.getElementById('recurrenceType').value;
-
-        // Title validation
-        if (!title) {
-            alert('Por favor, insira um título para o evento.');
-            return false;
+  // Listener para apagar evento (chama a função do Firebase)
+  deleteEventBtn.addEventListener('click', async function() {
+    const eventId = document.getElementById('eventId').value;
+    if (eventId) {
+      try {
+        await apagarEventoFirebase(eventId, firebaseAuth.currentUser, document.getElementById("calendarSelect").value);
+        const existingEvent = calendar.getEventById(eventId);
+        if (existingEvent) {
+          existingEvent.remove();
         }
-
-        // Start date validation
-        if (!start) {
-            alert('Por favor, selecione uma data e hora para o evento.');
-            return false;
-        }
-
-        // Custom recurrence validation
-        if (recurrenceType === 'custom') {
-            const selectedDays = document.querySelectorAll('input[name="recurDay"]:checked');
-            if (selectedDays.length === 0) {
-                alert('Por favor, selecione pelo menos um dia para eventos personalizados.');
-                return false;
-            }
-
-            const endDate = document.getElementById('recurrenceEndDate').value.trim();
-            if (!endDate) {
-                alert('Por favor, selecione uma data final para eventos personalizados.');
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    function customEventRender(info) {
-        try {
-            if (!info || !info.el || !info.event) {
-                console.warn('Informações do evento inválidas:', info);
-                return;
-            }
-            const el = info.el;
-            const event = info.event;
-            
-            // Localiza o container que exibe o título do evento
-            const titleEl = el.querySelector('.fc-event-title');
-            if (titleEl) {
-                // Limpa o conteúdo atual
-                titleEl.innerHTML = '';
-                
-                // 1. Se houver um ícone definido em extendedProps, adiciona-o primeiro
-                if (event.extendedProps.icon) {
-                    const iconContainer = document.createElement('span');
-                    iconContainer.innerHTML = window.getIconHTML(event.extendedProps.icon);
-                    titleEl.appendChild(iconContainer);
-                    titleEl.appendChild(document.createTextNode(' ')); // Espaço após o ícone
-                }
-                
-                // 2. Adiciona o texto do título
-                const textNode = document.createTextNode(event.title);
-                titleEl.appendChild(textNode);
-                
-                // 3. Se houver emojis definidos, adiciona-os depois do título
-                if (event.extendedProps.emoji) {
-                    titleEl.appendChild(document.createTextNode(' ')); // Espaço antes dos emojis
-                    const emojiContainer = document.createElement('span');
-                    emojiContainer.textContent = event.extendedProps.emoji;
-                    titleEl.appendChild(emojiContainer);
-                }
-            }
-        } catch (error) {
-            console.error('Erro na customização do evento:', error);
-        }
-    }
-
-    eventForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Add form validation
-        if (!validateEventForm()) {
-            return;
-        }
-        
-        const eventId = document.getElementById('eventId').value;
-        const title = document.getElementById('eventTitle').value;
-        const start = document.getElementById('eventStart').value;
-        const icon = document.getElementById('eventIcon').value;
-        const emoji = document.getElementById('eventEmoji').value;
-        const recurrence = document.getElementById('recurrenceType').value;
-        const description = document.getElementById('eventDescription').value;
-        const completed = document.getElementById('eventCompleted').checked;
-
-        // Updated title generation to use global icon handling
-        const formattedTitle = title;
-
-        const recurrenceConfig = {
-            type: recurrence,
-            frequency: 1,
-            days: [],
-            endDate: null
-        };
-
-        if (recurrence === 'custom') {
-            // Get selected days
-            const selectedDays = Array.from(
-                document.querySelectorAll('input[name="recurDay"]:checked')
-            ).map(checkbox => parseInt(checkbox.value));
-
-            recurrenceConfig.days = selectedDays;
-            recurrenceConfig.frequency = 
-                document.getElementById('recurrenceFrequency').value;
-            recurrenceConfig.endDate = 
-                document.getElementById('recurrenceEndDate').value || null;
-        } else if (recurrence === 'weekdays') {
-            recurrenceConfig.days = [1, 2, 3, 4, 5]; // Mon-Fri
-        }
-
-        const eventConfig = {
-            id: eventId || Date.now().toString(),
-            title: formattedTitle, // Título sem o HTML do ícone
-            start: start,
-            description: description,
-            extendedProps: {
-                completed: completed,
-                recurrence: recurrenceConfig,
-                icon: icon,     // Armazena somente o valor, por exemplo: "favorite"
-                emoji: emoji
-            }
-        };
-
-        // Handle event generation based on recurrence
-        if (recurrenceConfig.type !== 'none') {
-            generateRecurringEvents(eventConfig);
-        } else {
-            calendar.addEvent(eventConfig);
-        }
-
         closeModal();
-        saveEvents();
-    });
-
-    function generateRecurringEvents(baseEvent) {
-        const recurrence = baseEvent.extendedProps.recurrence;
-        const startDate = new Date(baseEvent.start);
-        const endDate = recurrence.endDate ? new Date(recurrence.endDate) : new Date(startDate.getFullYear() + 1, 11, 31);
-
-        let currentDate = new Date(startDate);
-        let eventCount = 0;
-
-        while (currentDate <= endDate) {
-            // Check if current date matches recurrence rules
-            let shouldAddEvent = false;
-
-            switch (recurrence.type) {
-                case 'daily':
-                    shouldAddEvent = true;
-                    break;
-                case 'weekly':
-                    shouldAddEvent = true;
-                    currentDate.setDate(currentDate.getDate() + 7);
-                    break;
-                case 'weekdays':
-                    shouldAddEvent = recurrence.days.includes(currentDate.getDay());
-                    break;
-                case 'custom':
-                    // Check if current day is in selected days and matches frequency
-                    const weekday = currentDate.getDay();
-                    const weeksSinceStart = Math.floor(
-                        (currentDate - startDate) / (7 * 24 * 60 * 60 * 1000)
-                    );
-                    
-                    shouldAddEvent = 
-                        recurrence.days.includes(weekday) && 
-                        (weeksSinceStart % parseInt(recurrence.frequency) === 0);
-                    break;
-            }
-
-            if (shouldAddEvent) {
-                const recurringEvent = {...baseEvent, 
-                    start: new Date(currentDate).toISOString(),
-                    id: `${baseEvent.id}-${eventCount++}`
-                };
-                calendar.addEvent(recurringEvent);
-            }
-
-            // Move to next day
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
+      } catch (error) {
+        console.error("Erro ao apagar o evento:", error);
+        alert("Erro ao apagar o evento. Veja o console para detalhes.");
+      }
     }
+  });
 
-    let eventToDelete = null;
-
-    calendar.on('eventClick', function(info) {
-        const event = info.event;
-        const baseEventId = event.id.split('-')[0];
-        const recurrence = event.extendedProps.recurrence;
-
-        // Check if event is part of a recurring series
-        if (recurrence && recurrence.type !== 'none') {
-            eventToDelete = event;
-            const deleteRecurringModal = document.getElementById('deleteRecurringModal');
-            deleteRecurringModal.style.display = 'block';
-        } else {
-            // Existing single event deletion logic
-            openEventModal(null, event);
-        }
-    });
-
-    function deleteRecurringEvents() {
-        if (!eventToDelete) return;
-
-        const deleteOption = document.querySelector('input[name="deleteOption"]:checked').value;
-        const baseEventId = eventToDelete.id.split('-')[0];
-
-        if (deleteOption === 'all') {
-            // Remove all events with the same base ID
-            const eventsToRemove = calendar.getEvents().filter(
-                event => event.id.startsWith(baseEventId)
-            );
-            eventsToRemove.forEach(event => event.remove());
-        } else {
-            // Remove only the specific event instance
-            eventToDelete.remove();
-        }
-
-        // Close the modal
-        document.getElementById('deleteRecurringModal').style.display = 'none';
-        
-        // Save changes
-        saveEvents();
-        
-        // Reset the eventToDelete
-        eventToDelete = null;
+  // Exclusão de eventos recorrentes (mantida)
+  let eventToDelete = null;
+  calendar.on('eventClick', function(info) {
+    const event = info.event;
+    const baseEventId = event.id.split('-')[0];
+    const recurrence = event.extendedProps.recurrence;
+    if (recurrence && recurrence.type !== 'none') {
+      eventToDelete = event;
+      const deleteRecurringModal = document.getElementById('deleteRecurringModal');
+      deleteRecurringModal.style.display = 'block';
+    } else {
+      openEventModal(null, event);
     }
+  });
 
-    document.getElementById('confirmDeleteRecurring').addEventListener('click', deleteRecurringEvents);
-
-    document.getElementById('deleteRecurringModal').querySelector('.close').addEventListener('click', function() {
-        document.getElementById('deleteRecurringModal').style.display = 'none';
-        eventToDelete = null;
-    });
-
-    function saveEvents() {
-        const events = calendar.getEvents().map(event => ({
-            id: event.id,
-            title: event.title,
-            start: event.startStr,
-            description: event.extendedProps.description,
-            extendedProps: event.extendedProps
-        }));
-
-        // Group events to avoid saving duplicate recurring events
-        const uniqueEvents = Array.from(
-            new Map(events.map(event => [event.id.split('-')[0], event]))
-            .values()
-        );
-
-        localStorage.setItem('calendarEvents', JSON.stringify(uniqueEvents));
+  function deleteRecurringEvents() {
+    if (!eventToDelete) return;
+    const deleteOption = document.querySelector('input[name="deleteOption"]:checked').value;
+    const baseEventId = eventToDelete.id.split('-')[0];
+    if (deleteOption === 'all') {
+      const eventsToRemove = calendar.getEvents().filter(event => event.id.startsWith(baseEventId));
+      eventsToRemove.forEach(event => event.remove());
+    } else {
+      eventToDelete.remove();
     }
+    document.getElementById('deleteRecurringModal').style.display = 'none';
+    eventToDelete = null;
+  }
+  document.getElementById('confirmDeleteRecurring').addEventListener('click', deleteRecurringEvents);
+  document.getElementById('deleteRecurringModal').querySelector('.close').addEventListener('click', function() {
+    document.getElementById('deleteRecurringModal').style.display = 'none';
+    eventToDelete = null;
+  });
 
-    function loadEvents() {
-        const savedEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-        savedEvents.forEach(event => {
-            if (event.extendedProps && event.extendedProps.recurrence && event.extendedProps.recurrence.type !== 'none') {
-                generateRecurringEvents(event);
-            } else {
-                calendar.addEvent(event);
-            }
-        });
-    }
-
-    // Deletar Evento
-    deleteEventBtn.addEventListener('click', function() {
-        const eventId = document.getElementById('eventId').value;
-        if (eventId) {
-            const existingEvent = calendar.getEventById(eventId);
-            if (existingEvent) {
-                existingEvent.remove();
-            }
-            closeModal();
-            saveEvents();
-        }
-    });
-
-    // Monthly Report Modal
-    monthlyReportBtn.addEventListener('click', function() {
-        generateMonthlyReport();
-        monthlyReportModal.style.display = 'block';
-    });
-
-    // Close Monthly Report Modal
-    monthlyReportModal.querySelector('.close').addEventListener('click', function() {
-        monthlyReportModal.style.display = 'none';
-    });
-
-    // Load saved progress
-    function loadUserProgress() {
-        const savedProgress = JSON.parse(localStorage.getItem('userProgress') || '{}');
-        Object.assign(userProgress, savedProgress);
-        
-        userScoreEl.textContent = userProgress.score || 0;
-        userLevelEl.textContent = userProgress.level || 1;
-    }
-
-    function saveUserProgress() {
-        localStorage.setItem('userProgress', JSON.stringify(userProgress));
-    }
-
-    loadEvents();
-    loadUserProgress();
-    window.addEventListener('beforeunload', saveEvents);
+  // Funções para salvar e carregar o progresso do usuário (mantidas via localStorage para gamificação)
+  function loadUserProgress() {
+    const savedProgress = JSON.parse(localStorage.getItem('userProgress') || '{}');
+    Object.assign(userProgress, savedProgress);
+    userScoreEl.textContent = userProgress.score || 0;
+    userLevelEl.textContent = userProgress.level || 1;
+  }
+  function saveUserProgress() {
+    localStorage.setItem('userProgress', JSON.stringify(userProgress));
+  }
+  loadUserProgress();
 });
+
+export { calendar };

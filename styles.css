@@ -569,4 +569,20 @@ emoji-picker {
 .login-container button:hover {
     background-color: var(--accent-color-variant);
 }
-  
+
+
+/* Container para o dropdown de calendário */
+.calendar-dropdown {
+    width: 100%;
+    text-align: center;
+    margin: 10px 0;
+}
+
+#calendarSelect {
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(187,134,252,0.3);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+}

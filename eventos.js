@@ -1,4 +1,8 @@
-async function salvarEventoPessoal(eventConfig, user) {
+import { addDoc, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { db } from "./auth.js";
+
+// Função para salvar um evento pessoal
+export async function salvarEventoPessoal(eventConfig, user) {
     try {
     // Se for um novo evento, use addDoc; se já tiver um ID, use setDoc com merge
     if (!eventConfig.id) {
@@ -15,7 +19,8 @@ async function salvarEventoPessoal(eventConfig, user) {
     }
 }
 
-async function salvarEventoCompartilhado(eventConfig) {
+// Função para salvar um evento compartilhado
+export async function salvarEventoCompartilhado(eventConfig) {
     try {
     if (!eventConfig.id) {
         const docRef = await addDoc(collection(db, "sharedEvents"), eventConfig);
