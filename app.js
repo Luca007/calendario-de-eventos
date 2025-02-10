@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (arg.event.extendedProps.createdBy === "TgqY2fwdFuRqtFyqBPXkUaABkbW2") {
               dotColor = "blue";
             } else if (arg.event.extendedProps.createdBy === "1MMo9n9B9Sa02Uz9xJEiGnRkbi92") {
-              dotColor = "pink";
+              dotColor = "#FF69B4";
             }
             html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-right:5px;"></span>`;
           }
