@@ -13,52 +13,49 @@ document.addEventListener('DOMContentLoaded', async function() {
   const deleteEventBtn = document.getElementById('deleteEventBtn');
   const modalTitle = document.getElementById('modalTitle');
 
-  calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
-    locale: 'pt-br',
-    editable: true,
-    events: [],
-    dateClick: function(info) {
-      openEventModal(info.date);
-    },
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      },
+      locale: 'pt-br',
+      editable: true,
+      events: [],
+      dateClick: function(info) {
+        openEventModal(info.date);
+      },
       eventContent: function(arg) {
-        // Constrói uma única string HTML para o conteúdo do evento
-        let html = "";
-        
-        // Se houver ícone, adiciona-o
-        if (arg.event.extendedProps.icon) {
-          html += window.getIconHTML(arg.event.extendedProps.icon) + " ";
-        }
-        
-        // Usa rawTitle (ou title) para obter o título "cru"
-        const displayTitle = (arg.event.extendedProps.rawTitle || arg.event.title).trim();
-        html += displayTitle;
-        
-        // Se houver emoji, adiciona-o
-        if (arg.event.extendedProps.emoji) {
-          html += " " + arg.event.extendedProps.emoji;
-        }
-        
-        // Adiciona um ponto colorido com base no criador do evento
-        if (arg.event.extendedProps.createdBy) {
-          let dotColor = "";
-          if (arg.event.extendedProps.createdBy === "TgqY2fwdFuRqtFyqBPXkUaABkbW2") {
-            dotColor = "blue";
-          } else if (arg.event.extendedProps.createdBy === "1MMo9n9B9Sa02Uz9xJEiGnRkbi92") {
-            dotColor = "pink";
+        // Utilize a função customEventRender para construir o conteúdo
+        // Ela retorna um objeto com a propriedade 'html'
+        try {
+          let html = "";
+          if (arg.event.extendedProps.createdBy) {
+            let dotColor = "";
+            if (arg.event.extendedProps.createdBy === "TgqY2fwdFuRqtFyqBPXkUaABkbW2") {
+              dotColor = "blue";
+            } else if (arg.event.extendedProps.createdBy === "1MMo9n9B9Sa02Uz9xJEiGnRkbi92") {
+              dotColor = "pink";
+            }
+            html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-right:5px;"></span>`;
           }
-          html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-left:5px;"></span>`;
+          if (arg.event.extendedProps.icon) {
+            html += window.getIconHTML(arg.event.extendedProps.icon) + " ";
+          }
+          const displayTitle = (arg.event.extendedProps.rawTitle || arg.event.title).trim();
+          html += displayTitle;
+          if (arg.event.extendedProps.emoji) {
+            html += " " + arg.event.extendedProps.emoji;
+          }
+          return { html: html };
+        } catch (error) {
+          console.error("Erro na customEventRender via eventContent:", error);
+          return { html: "" };
         }
-        
-        return { html: html };
       }
-      });
-  calendar.render();
+    });
+    calendar.render();
 
   const eventStartInput = document.getElementById('eventStart');
   const flatpickrInstance = flatpickr(eventStartInput, {
@@ -274,24 +271,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
       }
       const event = info.event;
-      // Constrói a string HTML do título
       let html = "";
-  
-      // Se houver ícone, adiciona-o
-      if (event.extendedProps.icon) {
-        html += window.getIconHTML(event.extendedProps.icon) + " ";
-      }
-  
-      // Usa rawTitle (ou title) para obter o título "cru"
-      const displayTitle = (event.extendedProps.rawTitle || event.title).trim();
-      html += displayTitle;
-  
-      // Se houver emoji, adiciona-o
-      if (event.extendedProps.emoji) {
-        html += " " + event.extendedProps.emoji;
-      }
-  
-      // Adiciona um indicador colorido baseado no criador
+      
+      // 1. Adiciona a bolinha (ponto) primeiro
       if (event.extendedProps.createdBy) {
         let dotColor = "";
         if (event.extendedProps.createdBy === "TgqY2fwdFuRqtFyqBPXkUaABkbW2") {
@@ -299,19 +281,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         } else if (event.extendedProps.createdBy === "1MMo9n9B9Sa02Uz9xJEiGnRkbi92") {
           dotColor = "pink";
         }
-        html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-left:5px;"></span>`;
+        html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-right:5px;"></span>`;
       }
-  
-      // Substitui completamente o conteúdo do elemento de título
+      
+      // 2. Adiciona o ícone (se houver)
+      if (event.extendedProps.icon) {
+        html += window.getIconHTML(event.extendedProps.icon) + " ";
+      }
+      
+      // 3. Adiciona o título "cru" (rawTitle ou title)
+      const displayTitle = (event.extendedProps.rawTitle || event.title).trim();
+      html += displayTitle;
+      
+      // 4. Se houver emoji, adiciona-o depois do título
+      if (event.extendedProps.emoji) {
+        html += " " + event.extendedProps.emoji;
+      }
+      
+      // Atribui a string completa ao elemento de título
       const titleEl = info.el.querySelector('.fc-event-title');
       if (titleEl) {
         titleEl.innerHTML = html;
       }
     } catch (error) {
-      console.error('Erro na customização do evento:', error);
+      console.error("Erro na customização do evento:", error);
     }
   }
-      
+          
   eventForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!validateEventForm()) {
