@@ -25,11 +25,11 @@
         <h1>Meu Organizador de Rotina</h1>
         <!-- Dropdown de seleção de calendário -->
         <div class="calendar-dropdown">
-        <select id="calendarSelect">
+            <select id="calendarSelect">
             <option value="ludica">Calendário Ludica</option>
             <option value="ludy">Calendário Ludy</option>
             <option value="luca">Calendário Luca</option>
-        </select>
+            </select>
         </div>
         <div class="header-stats">
             <div class="user-score">
@@ -39,6 +39,10 @@
             <div class="user-level">
                 Nível <span id="userLevel">1</span>
             </div>
+            <div class="form-group">
+                <label for="eventPoints">Pontos da Tarefa</label>
+                <input type="number" id="eventPoints" placeholder="Insira os pontos" min="0">
+              </div>              
         </div>
         <nav>
             <button id="addEventBtn" class="btn-primary">

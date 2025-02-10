@@ -1,10 +1,10 @@
 import { firebaseAuth } from "./auth.js";
 import { salvarEventoFirebase, apagarEventoFirebase } from "./firebaseEvents.js";
+import { loadUserProgressFirebase, updateUserProgressFirebase } from "./userProgress.js";
 
-// Declare a variável "calendar" no nível de módulo para que possamos exportá-la.
 let calendar;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   const calendarEl = document.getElementById('calendar');
   const eventModal = document.getElementById('eventModal');
   const addEventBtn = document.getElementById('addEventBtn');
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const deleteEventBtn = document.getElementById('deleteEventBtn');
   const modalTitle = document.getElementById('modalTitle');
 
-  // Configuração do FullCalendar
   calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
     headerToolbar: {
@@ -27,11 +26,40 @@ document.addEventListener('DOMContentLoaded', function() {
     dateClick: function(info) {
       openEventModal(info.date);
     },
-    eventDidMount: customEventRender
-  });
+      eventContent: function(arg) {
+        // Constrói uma única string HTML para o conteúdo do evento
+        let html = "";
+        
+        // Se houver ícone, adiciona-o
+        if (arg.event.extendedProps.icon) {
+          html += window.getIconHTML(arg.event.extendedProps.icon) + " ";
+        }
+        
+        // Usa rawTitle (ou title) para obter o título "cru"
+        const displayTitle = (arg.event.extendedProps.rawTitle || arg.event.title).trim();
+        html += displayTitle;
+        
+        // Se houver emoji, adiciona-o
+        if (arg.event.extendedProps.emoji) {
+          html += " " + arg.event.extendedProps.emoji;
+        }
+        
+        // Adiciona um ponto colorido com base no criador do evento
+        if (arg.event.extendedProps.createdBy) {
+          let dotColor = "";
+          if (arg.event.extendedProps.createdBy === "TgqY2fwdFuRqtFyqBPXkUaABkbW2") {
+            dotColor = "blue";
+          } else if (arg.event.extendedProps.createdBy === "1MMo9n9B9Sa02Uz9xJEiGnRkbi92") {
+            dotColor = "pink";
+          }
+          html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-left:5px;"></span>`;
+        }
+        
+        return { html: html };
+      }
+      });
   calendar.render();
 
-  // Configuração do Flatpickr para o input de data/hora
   const eventStartInput = document.getElementById('eventStart');
   const flatpickrInstance = flatpickr(eventStartInput, {
     enableTime: true,
@@ -40,14 +68,18 @@ document.addEventListener('DOMContentLoaded', function() {
     time_24hr: true
   });
 
-  // Função para abrir o modal de evento
+  if (firebaseAuth.currentUser) {
+    const progressData = await loadUserProgressFirebase(firebaseAuth.currentUser.uid);
+    document.getElementById('userScore').textContent = progressData.score || 0;
+    document.getElementById('userLevel').textContent = progressData.level || 1;
+  }
+
   function openEventModal(date = null, existingEvent = null) {
     eventForm.reset();
     deleteEventBtn.style.display = 'none';
     modalTitle.textContent = 'Adicionar Novo Evento';
     document.getElementById('eventId').value = '';
 
-    // Reseta recorrência
     recurrenceTypeSelect.value = 'none';
     document.getElementById('customRecurrenceGroup').style.display = 'none';
     document.querySelectorAll('input[name="recurDay"]').forEach(chk => chk.checked = false);
@@ -55,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('recurrenceEndDate').value = '';
 
     if (existingEvent) {
-      document.getElementById('eventTitle').value = existingEvent.title.replace(/<i class="material-icons">[^<]+<\/i>/g, '').trim();
+      document.getElementById('eventTitle').value = existingEvent.extendedProps.rawTitle || existingEvent.title;
       document.getElementById('eventStart').value = existingEvent.startStr;
       document.getElementById('eventDescription').value = existingEvent.extendedProps.description || '';
       document.getElementById('eventId').value = existingEvent.id;
@@ -90,13 +122,18 @@ document.addEventListener('DOMContentLoaded', function() {
       if (existingEvent.extendedProps.emoji) {
         document.getElementById('eventEmoji').value = existingEvent.extendedProps.emoji;
       }
+      if (existingEvent.extendedProps.taskPoints !== undefined) {
+        const pointsInput = document.getElementById('eventPoints');
+        if (pointsInput) {
+          pointsInput.value = existingEvent.extendedProps.taskPoints;
+        }
+      }
     } else if (date) {
       flatpickrInstance.setDate(date);
     }
     eventModal.style.display = 'block';
   }
 
-  // Função para fechar o modal
   function closeModal() {
     eventModal.style.display = 'none';
     eventForm.reset();
@@ -105,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function() {
   addEventBtn.addEventListener('click', () => openEventModal());
   closeModalBtn.addEventListener('click', closeModal);
 
-  // Manipulação do tipo de recorrência
   const recurrenceTypeSelect = document.getElementById('recurrenceType');
   const customRecurrenceGroup = document.getElementById('customRecurrenceGroup');
   const recurrenceEndDateInput = document.getElementById('recurrenceEndDate');
@@ -121,7 +157,6 @@ document.addEventListener('DOMContentLoaded', function() {
     customRecurrenceGroup.style.display = this.value === 'custom' ? 'block' : 'none';
   });
 
-  // Configuração do emoji
   const emojiInput = document.getElementById('eventEmoji');
   const emojiPicker = document.querySelector('emoji-picker');
   const openEmojiPicker = document.getElementById('openEmojiPicker');
@@ -148,55 +183,33 @@ document.addEventListener('DOMContentLoaded', function() {
     emojiInput.value = '';
   });
 
-  // Recursos de gamificação (mantidos conforme seu código)
   const userScoreEl = document.getElementById('userScore');
   const userLevelEl = document.getElementById('userLevel');
   const monthlyReportBtn = document.getElementById('monthlyReportBtn');
   const monthlyReportModal = document.getElementById('monthlyReportModal');
   const achievementModal = document.getElementById('achievementModal');
 
-  const userProgress = {
-    score: 0,
-    level: 1,
-    monthlyStats: {},
-    achievements: []
-  };
+  let userProgress = { score: 0, level: 1 };
 
-  function updateUserScore(points) {
+  async function updateUserScore(points) {
     userProgress.score += points;
     userProgress.level = Math.floor(userProgress.score / 100) + 1;
     userScoreEl.textContent = userProgress.score;
     userLevelEl.textContent = userProgress.level;
-    checkAchievements();
-    saveUserProgress();
+    await updateUserProgressFirebase(firebaseAuth.currentUser.uid, userProgress);
   }
 
-  function checkAchievements() {
-    const achievements = [
-      { name: 'Primeiro Passo', condition: () => userProgress.score >= 50 },
-      { name: 'Consistência', condition: () => userProgress.score >= 200 },
-      { name: 'Mestre da Organização', condition: () => userProgress.level >= 5 }
-    ];
-    achievements.forEach(achievement => {
-      if (achievement.condition() && !userProgress.achievements.includes(achievement.name)) {
-        userProgress.achievements.push(achievement.name);
-        showAchievementModal(achievement.name);
-      }
-    });
+  async function loadUserProgress() {
+    if (!firebaseAuth.currentUser) {
+      console.warn("Usuário não autenticado; pulando loadUserProgress");
+      return;
+    }
+    userProgress = await loadUserProgressFirebase(firebaseAuth.currentUser.uid);
+    userScoreEl.textContent = userProgress.score || 0;
+    userLevelEl.textContent = userProgress.level || 1;
   }
-
-  function showAchievementModal(achievementName) {
-    const achievementContent = document.getElementById('achievementContent');
-    achievementContent.innerHTML = `
-      <i class="material-icons" style="font-size: 64px; color: var(--accent-color);">stars</i>
-      <h3>Parabéns!</h3>
-      <p>Você desbloqueou a conquista: ${achievementName}</p>
-    `;
-    achievementModal.style.display = 'block';
-    setTimeout(() => {
-      achievementModal.style.display = 'none';
-    }, 3000);
-  }
+  
+  loadUserProgress();
 
   function generateMonthlyReport() {
     const currentMonth = new Date().getMonth();
@@ -227,7 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
       .join('');
   }
 
-  // Função de validação do formulário
   function validateEventForm() {
     const title = document.getElementById('eventTitle').value.trim();
     const start = document.getElementById('eventStart').value.trim();
@@ -255,71 +267,78 @@ document.addEventListener('DOMContentLoaded', function() {
     return true;
   }
 
-  // Função para customizar a renderização dos eventos no calendário
   function customEventRender(info) {
     try {
       if (!info || !info.el || !info.event) {
         console.warn('Informações do evento inválidas:', info);
         return;
       }
-      const el = info.el;
       const event = info.event;
-      const titleEl = el.querySelector('.fc-event-title');
+      // Constrói a string HTML do título
+      let html = "";
+  
+      // Se houver ícone, adiciona-o
+      if (event.extendedProps.icon) {
+        html += window.getIconHTML(event.extendedProps.icon) + " ";
+      }
+  
+      // Usa rawTitle (ou title) para obter o título "cru"
+      const displayTitle = (event.extendedProps.rawTitle || event.title).trim();
+      html += displayTitle;
+  
+      // Se houver emoji, adiciona-o
+      if (event.extendedProps.emoji) {
+        html += " " + event.extendedProps.emoji;
+      }
+  
+      // Adiciona um indicador colorido baseado no criador
+      if (event.extendedProps.createdBy) {
+        let dotColor = "";
+        if (event.extendedProps.createdBy === "TgqY2fwdFuRqtFyqBPXkUaABkbW2") {
+          dotColor = "blue";
+        } else if (event.extendedProps.createdBy === "1MMo9n9B9Sa02Uz9xJEiGnRkbi92") {
+          dotColor = "pink";
+        }
+        html += `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${dotColor}; margin-left:5px;"></span>`;
+      }
+  
+      // Substitui completamente o conteúdo do elemento de título
+      const titleEl = info.el.querySelector('.fc-event-title');
       if (titleEl) {
-        titleEl.innerHTML = '';
-        if (event.extendedProps.icon) {
-          const iconContainer = document.createElement('span');
-          iconContainer.innerHTML = window.getIconHTML(event.extendedProps.icon);
-          titleEl.appendChild(iconContainer);
-          titleEl.appendChild(document.createTextNode(' '));
-        }
-        const textNode = document.createTextNode(event.title);
-        titleEl.appendChild(textNode);
-        if (event.extendedProps.emoji) {
-          titleEl.appendChild(document.createTextNode(' '));
-          const emojiContainer = document.createElement('span');
-          emojiContainer.textContent = event.extendedProps.emoji;
-          titleEl.appendChild(emojiContainer);
-        }
+        titleEl.innerHTML = html;
       }
     } catch (error) {
       console.error('Erro na customização do evento:', error);
     }
   }
-
-  // Listener de envio do formulário para salvar o evento no Firebase
+      
   eventForm.addEventListener('submit', async function(e) {
     e.preventDefault();
-  
     if (!validateEventForm()) {
       return;
     }
     
-    // Coleta os valores do formulário
     const eventId = document.getElementById('eventId').value;
-    const title = document.getElementById('eventTitle').value;
+    const title = document.getElementById('eventTitle').value.trim();
     const start = document.getElementById('eventStart').value;
     const icon = document.getElementById('eventIcon').value;
     const emoji = document.getElementById('eventEmoji').value;
     const recurrence = document.getElementById('recurrenceType').value;
     const description = document.getElementById('eventDescription').value;
     const completed = document.getElementById('eventCompleted').checked;
+    const rawTitle = title;  // Título "cru"
+    const pointsInput = document.getElementById('eventPoints');
+    const taskPoints = pointsInput ? Number(pointsInput.value) : 0;
     
-    // Neste exemplo, o título formatado é apenas o título sem concatenar emoji ou ícone
-    const formattedTitle = title;
-    
-    // Configuração de recorrência
     const recurrenceConfig = {
       type: recurrence,
       frequency: 1,
       days: [],
       endDate: null
     };
-  
     if (recurrence === 'custom') {
-      const selectedDays = Array.from(
-        document.querySelectorAll('input[name="recurDay"]:checked')
-      ).map(checkbox => parseInt(checkbox.value));
+      const selectedDays = Array.from(document.querySelectorAll('input[name="recurDay"]:checked'))
+                                .map(checkbox => parseInt(checkbox.value));
       recurrenceConfig.days = selectedDays;
       recurrenceConfig.frequency = document.getElementById('recurrenceFrequency').value;
       recurrenceConfig.endDate = document.getElementById('recurrenceEndDate').value || null;
@@ -327,51 +346,29 @@ document.addEventListener('DOMContentLoaded', function() {
       recurrenceConfig.days = [1, 2, 3, 4, 5];
     }
     
-    // Obtém o calendário atualmente selecionado pelo dropdown
     const currentCalendar = document.getElementById("calendarSelect").value;
+    const newId = eventId || (firebaseAuth.currentUser.uid + "-" + Date.now().toString());
     
-    // Monta o objeto do evento
     const eventConfig = {
-      id: eventId || Date.now().toString(),
-      title: formattedTitle,
+      id: newId,
+      title: title,
       start: start,
       description: description,
       extendedProps: {
+        rawTitle: rawTitle,
         completed: completed,
         recurrence: recurrenceConfig,
         icon: icon,
         emoji: emoji,
-        calendar: currentCalendar
+        calendar: currentCalendar,
+        createdBy: firebaseAuth.currentUser.uid,
+        taskPoints: taskPoints
       }
     };
     
     try {
-      // Salva o evento no Firebase (função definida no firebaseEvents.js)
       await salvarEventoFirebase(eventConfig, firebaseAuth.currentUser, currentCalendar);
-      
-      // Se estamos editando (evento já existe)
-      if (eventId) {
-        // Procura o evento existente no FullCalendar
-        const existingEvent = calendar.getEventById(eventId);
-        if (existingEvent) {
-          // Atualiza as propriedades do evento existente
-          existingEvent.setProp('title', formattedTitle);
-          existingEvent.setStart(start);
-          existingEvent.setExtendedProp('description', description);
-          existingEvent.setExtendedProp('completed', completed);
-          existingEvent.setExtendedProp('recurrence', recurrenceConfig);
-          existingEvent.setExtendedProp('icon', icon);
-          existingEvent.setExtendedProp('emoji', emoji);
-          existingEvent.setExtendedProp('calendar', currentCalendar);
-        } else {
-          // Se, por algum motivo, o evento não for encontrado, adiciona-o
-          calendar.addEvent(eventConfig);
-        }
-      } else {
-        // Se for um novo evento, adiciona-o ao FullCalendar
-        calendar.addEvent(eventConfig);
-      }
-      
+      await updateUserScore(taskPoints);
       closeModal();
     } catch (error) {
       console.error("Erro ao salvar o evento no Firebase:", error);
@@ -379,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Listener para apagar evento (chama a função do Firebase)
   deleteEventBtn.addEventListener('click', async function() {
     const eventId = document.getElementById('eventId').value;
     if (eventId) {
@@ -397,7 +393,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Exclusão de eventos recorrentes (mantida)
   let eventToDelete = null;
   calendar.on('eventClick', function(info) {
     const event = info.event;
@@ -430,18 +425,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('deleteRecurringModal').style.display = 'none';
     eventToDelete = null;
   });
-
-  // Funções para salvar e carregar o progresso do usuário (mantidas via localStorage para gamificação)
-  function loadUserProgress() {
-    const savedProgress = JSON.parse(localStorage.getItem('userProgress') || '{}');
-    Object.assign(userProgress, savedProgress);
-    userScoreEl.textContent = userProgress.score || 0;
-    userLevelEl.textContent = userProgress.level || 1;
-  }
-  function saveUserProgress() {
-    localStorage.setItem('userProgress', JSON.stringify(userProgress));
-  }
-  loadUserProgress();
 });
 
 export { calendar };
